@@ -3,6 +3,7 @@ from typing import List
 from dataclasses import dataclass, field
 import numpy as np
 from fuzzywuzzy import fuzz
+from zhconv import convert
 
 @dataclass
 class Predictedtextline:
@@ -12,7 +13,11 @@ class Predictedtextline:
     rotation: int = field(init=False)
 
     def __post_init__(self):
+        # 计算文本框角度
         self.rotation = self._getrotation()
+        # 繁简体转换
+        self.text = convert(self.text, 'zh-cn')
+    
 
     def _getrotation(self):
         def _get_distance(pa, pb):
@@ -65,7 +70,8 @@ class PredictedFrame:
         self._subtitles = []
         self._backtextlines = []
         for line in ocr_result:
-            self._textlines.append(Predictedtextline(line[0], line[1][0], line[1][1])) # line[0] 是四个边框点，line[1][0]是识别内容。 line[1][1]是识别正确率
+            self._textlines.append(Predictedtextline(line[0], line[1][0], line[1][1])) 
+            # line[0] 是四个边框点，line[1][0]是识别内容。 line[1][1]是识别正确率
         
         self._split_title_background()
         self._subtitle_average_conf = self._calculate_subtitle_average_conf()
