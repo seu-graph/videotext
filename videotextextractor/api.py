@@ -28,4 +28,4 @@ def get_keyframe_background_text(video_path:str, index:int, lang = "ch") -> str:
 
 
 # get_subtitles(video_path="../test_data/Multiline_Example.mp4", lang='ch', manual=True)
-get_subtitles(video_path="../test_data/YueYu.mp4", lang='ch', manual=True)
+#get_subtitles(video_path="../test_data/YueYu.mp4", lang='ch', manual=True)
