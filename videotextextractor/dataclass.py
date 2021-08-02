@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 import numpy as np
 from fuzzywuzzy import fuzz
 from zhconv import convert
+#from opencc import OpenCC
+
 
 @dataclass
 class Predictedtextline:
@@ -17,6 +19,7 @@ class Predictedtextline:
         self.rotation = self._getrotation()
         # 繁简体转换
         self.text = convert(self.text, 'zh-cn')
+        #self.text = OpenCC('t2s').convert(self.text)
     
 
     def _getrotation(self):
@@ -121,13 +124,13 @@ class PredictedFrame:
                     condidate_lines.append(textline)
                 else:
                     self._backtextlines.append(textline)
-        else:                                   # 否则候选文本行为所有检测到的文本行
+        else:                                   # 否则候选文本列表为所有检测到的文本行
             condidate_lines = self._textlines  
         for textline in condidate_lines:
-            #if textline.confidence >= self._conf_thresh and abs(textline.rotation) < self._rota_thresh:
-            self._subtitles.append(textline)
-            #else:
-                #self._backtextlines.append(textline)
+            if textline.confidence >= self._conf_thresh and abs(textline.rotation) < self._rota_thresh:
+                self._subtitles.append(textline)
+            else:
+                self._backtextlines.append(textline)
 
     def _calculate_subtitle_average_conf(self):       # 获取subtitles的平均置信度
         from numpy import mean

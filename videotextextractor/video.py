@@ -106,6 +106,7 @@ class Video:
                 utils.get_srt_timestamp(sub.index_end, self.fps),
                 sub.text
                 ) for i, sub in enumerate(self.pred_subs))
+        
 
     def _generate_subtitles(self, sim_threshold: int) -> None:
         self.pred_subs = []
