@@ -58,3 +58,8 @@
 import api
 api.get_subtitles(video_path="../test_data/YueYu.mp4", lang='ch', manual=True)
 </pre>
+
+6. 运行demo `python demo.py`
+- 结果保存在output目录下
+
+7. 评估视频字幕识别正确率 `python eval.py`

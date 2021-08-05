@@ -1,5 +1,5 @@
 import datetime
-from fuzzywuzzy import fuzz
+#from fuzzywuzzy import fuzz
 
 
 # convert time string to frame index
@@ -26,6 +26,4 @@ def get_srt_timestamp(frame_index: int, fps: float):
     return '{:02d}:{:02d}:{:02d},{:03d}'.format(h, m, s, ms)
 
 
-# Test
-if __name__ == "__main__":
-    print(fuzz.ratio("", ""))
+

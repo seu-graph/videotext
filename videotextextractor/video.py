@@ -1,15 +1,16 @@
 from __future__ import annotations
 from typing import List
 import sys
-import multiprocessing
+#import multiprocessing
 import cv2
 from paddleocr import PaddleOCR, draw_ocr
 import os
 import codecs
+from PIL import Image
 
-import utils
-from dataclass import PredictedFrame, PredictedSubtitle, Predictedtextline
-from video_util import Capture, manual_cricumscribe_bound
+from . import utils
+from .datamodel import PredictedFrame, PredictedSubtitle, Predictedtextline
+from .video_util import Capture, manual_cricumscribe_bound
 
 
 class Video:
@@ -36,15 +37,15 @@ class Video:
             self.pred_frames = []
     
     def config_ocr_engine(self, lang, use_gpu = True, drop_score = 0.6):  # ### TODO   使用argparse
-        det_path = '../infer_model/det'
-        rec_path = '../infer_model/rec'
-        cls_path = '../infer_model/cls'
-        rec_dic_path = '../infer_model/chinese_cht_dict.txt'
-        if  lang == 'ch_tra':
-            self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score, rec_model_dir=rec_path,
-                                        det_model_dir=det_path, cls_model_dir=cls_path, rec_char_dict_path = rec_dic_path)
-        else:
-            self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score, rec_model_dir=rec_path, det_model_dir=det_path, cls_model_dir=cls_path)
+        det_path = './infer_model/det'
+        rec_path = './infer_model/rec'
+        cls_path = './infer_model/cls'
+        rec_dic_path = '/opt/videotext/infer_model/ppocr_keys_v1.txt'
+        det_path_big = '/opt/videotext/infer_model/ch_ppocr_server_v2.0_det_infer'
+        rec_path_big = '/opt/videotext/infer_model/ch_ppocr_server_v2.0_rec_infer'
+        self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score, rec_model_dir=rec_path_big, rec_char_dict_path = rec_dic_path,
+                                        det_model_dir=det_path_big)
+        #self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score, rec_model_dir=rec_path, det_model_dir=det_path, cls_model_dir=cls_path, rec_char_dict_path = rec_dic_path)
         # self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score)
 
     def run_ocr(self, time_start=None, time_end=None) -> None:
@@ -68,10 +69,10 @@ class Video:
             frames = (v.read()[1] for _ in range(num_ocr_frames))   # 生成器
             # paddleocr引擎不支持多进程
             for i, frame in enumerate(frames):  # 均匀抽帧
-                if i % int(self.fps/4) == 0:
+                if i % int(self.fps/10) == 0:   #每秒抽10帧
                     newframe = PredictedFrame(i+ocr_start, self._image_to_data(frame), subtitle_bound=self.subtitle_bound)
-                    print('字幕:'+newframe.subtitle_text)
-                    print('背景:'+newframe.background_text)
+                    print('----------- 字 幕 ------------\n'+newframe.subtitle_text)
+                    print('----------- 背 景 ------------\n'+newframe.background_text)
                     self.pred_frames.append(newframe)
             '''
             # perform ocr to frames in parallel
@@ -80,6 +81,44 @@ class Video:
                 PredictedFrame(i + ocr_start, textline_res, subtitle_bound = self.subtitle_bound) for i, textline_res in enumerate(it_ocr)
             ]
             '''
+    def run_ocr_keyframe(self, index_list, visual_dir=None):
+        # 处理手动选框的情况
+        if self.manual_cricumscribe:
+            self.subtitle_bound = manual_cricumscribe_bound(self.path)
+        else:
+            self.subtitle_bound = [[0, self.height*2/3], [self.width, self.height]]  # 默认区域为底部1/3区域
+
+        # get frames from ocr_start to ocr_end
+        with Capture(self.path) as v: 
+            for index in index_list:
+                if index < 0 or index > self.num_frames:
+                    print("this index [{}] out of range, please check again! continue next...".format(index))
+                    continue
+                v.set(cv2.CAP_PROP_POS_FRAMES, index)
+                success, frame = v.read()
+                if not success:
+                    print("read current frame:{} failed, continue next....".format(index))
+                    continue
+                newframe = PredictedFrame(index, self._image_to_data(frame), subtitle_bound=self.subtitle_bound)
+                self.pred_frames.append(newframe)
+                print('********* 视频帧：{} **********\n'.format(index))
+                print('----------- 字 幕 ------------\n'+newframe.subtitle_text)
+                print('----------- 背 景 ------------\n'+newframe.background_text)
+                #可视化结果保存
+                if visual_dir:
+                    save_path = os.path.join( visual_dir, str(index) + '_result.jpg')
+                    boxes = newframe.get_text_box_list("all")
+                    texts = newframe.get_text_ocr_list("all")
+                    scores = newframe.get_confidence_list("all")
+                    im_show = draw_ocr(frame, boxes, texts, scores, font_path = "./simfang.ttf")
+                    im_show = Image.fromarray(im_show)
+                    im_show.save(save_path)
+        return
+        
+                
+                
+
+
 
     def estimate_subtitle_bound(self):  # 统计文本框出现最频繁的范围
         pass    # TODO
@@ -91,23 +130,20 @@ class Video:
         except Exception as e:
             sys.exit('{}: {}'.format(e.__class__.__name__, e))
 
-    def get_subtitles(self, sim_threshold: int) -> str:   # return generator 生成器
+    def get_subtitles(self, sim_threshold: int, srt_format = False) -> str:   
         self._generate_subtitles(sim_threshold)
-        output_path = '../output/result.txt'
-        if not os.path.exists(output_path):
-            f = open(output_path, "w+")
-            f.close()
-        f = codecs.open(output_path, 'w', 'utf-8')
-        for sub in self.pred_subs:
-            f.write(sub.text+"。")
-        return ''.join('{}\t frame: {} ---> {}\n{} --> {}\n{}\n\n'.format(
-                i, sub.index_start, sub.index_end, 
-                utils.get_srt_timestamp(sub.index_start, self.fps), 
-                utils.get_srt_timestamp(sub.index_end, self.fps),
-                sub.text
-                ) for i, sub in enumerate(self.pred_subs))
-        
+        if srt_format:
+            return ''.join('{}\t frame: {} ---> {}\n{} --> {}\n{}\n\n'.format(
+                    i, sub.index_start, sub.index_end, 
+                    utils.get_srt_timestamp(sub.index_start, self.fps), 
+                    utils.get_srt_timestamp(sub.index_end, self.fps),
+                    sub.text
+                    ) for i, sub in enumerate(self.pred_subs))
+        # 否则返回无格式的字幕文本
+        #return ''.join('{}\n'.format( sub.text ) for sub in self.pred_subs)
+        return '\n'.join(sub.text for sub in self.pred_subs)
 
+    # 滑动窗口字幕分割
     def _generate_subtitles(self, sim_threshold: int) -> None:
         self.pred_subs = []
         if self.pred_frames is None:
