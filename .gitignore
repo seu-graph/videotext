@@ -3,3 +3,6 @@ __pycache__/
 *.pdiparams*
 *.pdmodel
 result.txt
+test_data/*frames
+output/*
+result_*
