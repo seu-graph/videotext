@@ -36,7 +36,7 @@ class Video:
             self.subtitle_bound = [[0, self.height*2/3], [self.width, self.height]]  # 默认区域为底部1/3区域
             self.pred_frames = []
     
-    def config_ocr_engine(self, lang, use_gpu = True, drop_score = 0.6):  # ### TODO   使用argparse
+    def config_ocr_engine(self, lang, use_gpu = True, drop_score = 0.8):  # ### TODO   使用argparse
         det_path = './infer_model/det'
         rec_path = './infer_model/rec'
         cls_path = './infer_model/cls'
@@ -81,13 +81,14 @@ class Video:
                 PredictedFrame(i + ocr_start, textline_res, subtitle_bound = self.subtitle_bound) for i, textline_res in enumerate(it_ocr)
             ]
             '''
-    def run_ocr_keyframe(self, index_list, visual_dir=None):
+    def run_ocr_keyframe(self, index_list, visual_dir=None) -> List:
         # 处理手动选框的情况
         if self.manual_cricumscribe:
             self.subtitle_bound = manual_cricumscribe_bound(self.path)
         else:
             self.subtitle_bound = [[0, self.height*2/3], [self.width, self.height]]  # 默认区域为底部1/3区域
-
+        
+        textlines_ret = []
         # get frames from ocr_start to ocr_end
         with Capture(self.path) as v: 
             for index in index_list:
@@ -100,7 +101,7 @@ class Video:
                     print("read current frame:{} failed, continue next....".format(index))
                     continue
                 newframe = PredictedFrame(index, self._image_to_data(frame), subtitle_bound=self.subtitle_bound)
-                self.pred_frames.append(newframe)
+                #self.pred_frames.append(newframe)  //关键帧无需保存frame信息，节省内存，直接使用全局文本行列表存储结果
                 print('********* 视频帧：{} **********\n'.format(index))
                 print('----------- 字 幕 ------------\n'+newframe.subtitle_text)
                 print('----------- 背 景 ------------\n'+newframe.background_text)
@@ -113,7 +114,23 @@ class Video:
                     im_show = draw_ocr(frame, boxes, texts, scores, font_path = "./simfang.ttf")
                     im_show = Image.fromarray(im_show)
                     im_show.save(save_path)
-        return
+                # 全局文本行去重
+                cur_textlines = newframe.background_textlines
+                for cand_line in cur_textlines:
+                    append_flag = True
+                    for i in range(len(textlines_ret)-1,-1,-1):
+                        exist_line = textlines_ret[i]
+                        if exist_line == cand_line:  #文本相似
+                            if exist_line.confidence < cand_line.confidence:  # 且置信度更高，则替换
+                                textlines_ret[i] = cand_line
+                            # 否则忽略
+                            append_flag = False
+                            break
+                    
+                    if append_flag:  # 表示当前cand_line未重复，添加
+                        textlines_ret.append(cand_line)
+
+        return '\n'.join(line.text for line in textlines_ret)
         
                 
                 

@@ -11,7 +11,7 @@ from opencc import OpenCC
 class Predictedtextline:
     tbox: list[list] #4*point
     text: str
-    confidence: int
+    confidence: float
     rotation: int = field(init=False)
 
     def __post_init__(self):
@@ -53,6 +53,14 @@ class Predictedtextline:
     def __repr__(self):
         return "textbox:{}\t rotation:{}\t text:{} [confidence:{}]\n".format(self.tbox, self.rotation, self.text, self.confidence)
 
+    def __eq__(self, other):
+        # iou > 0.85 && text 相似度 > 0.9 // iou-> TODO
+        thred = 0.8
+        if len(self.text) <= 5 or len(other.text) <= 5:
+            thred = 0.6
+        return fuzz.partial_ratio(self.text, other.text)/100 >= thred
+
+    #def __hash__(self): //None
 
 class PredictedFrame:
     _index: int  # 0-based index of the frame
@@ -61,7 +69,7 @@ class PredictedFrame:
     _subtitle_average_conf: float
     _backtextlines: List[Predictedtextline] = []
     _rota_thresh: float = 1.5
-    _conf_thresh: float = 0.9
+    _conf_thresh: float = 0.8
     _subtitle_bound: list[list] # 2 point: left-up and right-down
 
     def __init__(self, index, ocr_result:list, rota_thresh = 1.5, conf_thresh = 0.8, subtitle_bound = None):
@@ -72,6 +80,7 @@ class PredictedFrame:
         self._textlines = []
         self._subtitles = []
         self._backtextlines = []
+        # 构造predictedtextline
         for line in ocr_result:
             self._textlines.append(Predictedtextline(line[0], line[1][0], line[1][1])) 
             # line[0] 是四个边框点，line[1][0]是识别内容。 line[1][1]是识别正确率
@@ -127,7 +136,7 @@ class PredictedFrame:
     def subtitle_text(self):
         texts = [line.text for line in self._subtitles]
         if texts:
-            return "".join(texts)
+            return " ".join(texts)
         else:
             return ''
 
@@ -146,14 +155,24 @@ class PredictedFrame:
             return "\n".join(texts)
         else:
             return ''
+    
+    @property
+    def background_textlines(self):
+        return self._backtextlines
 
     def with_no_subtitle(self):
         return len(self._subtitles) == 0
 
+    @staticmethod
+    def filter_textlines(textlines):
+        #return [line if len(line.text) > 3 for line in textlines ]
+        return list(filter(lambda line : len(line.text)>3, textlines))
+
     def _split_title_background(self):
         condidate_lines = []
+        filtered_lines = self.filter_textlines(self._textlines)
         if self._subtitle_bound is not None:    # 如果设置了bound范围，则先过滤一遍得到候选文本行
-            for textline in self._textlines:
+            for textline in filtered_lines:
                 point_leup, point_ridw = textline.tbox[0], textline.tbox[2]
                 bound_leup, bound_ridw = self._subtitle_bound[0], self._subtitle_bound[1]
                 if point_leup[0] >= bound_leup[0] and point_leup[1] >= bound_leup[1] and point_ridw[0] <= bound_ridw[0] and point_ridw[1] <= bound_ridw[1]:
@@ -161,7 +180,7 @@ class PredictedFrame:
                 else:
                     self._backtextlines.append(textline)
         else:                                   # 否则候选文本列表为所有检测到的文本行
-            condidate_lines = self._textlines  
+            condidate_lines = filtered_lines  
         for textline in condidate_lines:
             if textline.confidence >= self._conf_thresh and abs(textline.rotation) < self._rota_thresh:
                 self._subtitles.append(textline)
@@ -217,7 +236,7 @@ class PredictedFrame:
 class PredictedSubtitle:
     frames: List[PredictedFrame]
     candidate_frame: PredictedFrame
-    sim_threshold: int
+    sim_threshold: float
     text: str
 
     def __init__(self, frames: List[PredictedFrame], sim_threshold: int):
