@@ -3,6 +3,8 @@ __pycache__/
 *.pdiparams*
 *.pdmodel
 result.txt
-test_data/*frames
+test_data/
 output/*
 result_*
+*_subtitle.txt
+*_keyback.txt
