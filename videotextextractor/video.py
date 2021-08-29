@@ -150,12 +150,20 @@ class Video:
     def get_subtitles(self, sim_threshold: int, srt_format = False) -> str:   
         self._generate_subtitles(sim_threshold)
         if srt_format:
-            return ''.join('{}\t frame: {} ---> {}\n{} --> {}\n{}\n\n'.format(
-                    i, sub.index_start, sub.index_end, 
-                    utils.get_srt_timestamp(sub.index_start, self.fps), 
-                    utils.get_srt_timestamp(sub.index_end, self.fps),
-                    sub.text
-                    ) for i, sub in enumerate(self.pred_subs))
+            # return ''.join('{}\t frame: {} ---> {}\n{} --> {}\n{}\n\n'.format(
+            #         i, sub.index_start, sub.index_end, 
+            #         utils.get_srt_timestamp(sub.index_start, self.fps), 
+            #         utils.get_srt_timestamp(sub.index_end, self.fps),
+            #         sub.text
+            #         ) for i, sub in enumerate(self.pred_subs))
+            ret = [ {
+                "No": i, 
+                "frameNo":[sub.index_start, sub.index_end], 
+                "frameTime": utils.get_srt_timestamp(sub.index_start, self.fps) +","+ utils.get_srt_timestamp(sub.index_end, self.fps),
+                "data":sub.text
+                } 
+                for i, sub in enumerate(self.pred_subs) ]
+            return ret  #字典列表
         # 否则返回无格式的字幕文本
         #return ''.join('{}\n'.format( sub.text ) for sub in self.pred_subs)
         return '\n'.join(sub.text for sub in self.pred_subs)

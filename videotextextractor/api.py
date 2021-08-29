@@ -4,8 +4,19 @@ from .datamodel import PredictedFrame
 from cv2 import cv2
 from paddleocr import draw_ocr
 import os
+import json
 
-def get_subtitles(video_path: str, lang="ch", manual=False, srt_format=False, outfile=None) -> str:
+def ocr(video:str, lang="ch", manual=False):
+    v = Video(video, manual_cri=manual)
+    v.config_ocr_engine(lang = lang, drop_score=0.85)
+    v.run_ocr()
+    res = v.get_subtitles(sim_threshold=0.7, srt_format=True)
+    json_res = json.dumps(res, ensure_ascii=False)
+    print(json_res)
+    return json_res
+
+
+def get_subtitles(video_path: str, lang="ch", manual=False, srt_format=True, outfile=None) -> str:
     v = Video(video_path, manual_cri=manual)    # 自动判别字幕和背景
     v.config_ocr_engine(lang=lang, drop_score=0.85)
     v.run_ocr()
@@ -38,9 +49,4 @@ def get_keyframe_text(video_path:str, indexlst, lang = "ch", outfile=None):
     print("The ocr result saved!")
     return
 
-# def get_subtitiles_by_manual()
-# TODO
 
-
-# get_subtitles(video_path="../test_data/Multiline_Example.mp4", lang='ch', manual=True)
-#get_subtitles(video_path="../test_data/YueYu.mp4", lang='ch', manual=True)

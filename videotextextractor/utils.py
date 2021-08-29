@@ -23,7 +23,8 @@ def get_srt_timestamp(frame_index: int, fps: float):
     ms = td.microseconds // 1000
     m, s = divmod(td.seconds, 60)
     h, m = divmod(m, 60)
-    return '{:02d}:{:02d}:{:02d},{:03d}'.format(h, m, s, ms)
+    #return '{:02d}:{:02d}:{:02d},{:03d}'.format(h, m, s, ms)
+    return '{:02d}:{:02d}:{:02d}'.format(h, m, s)
 
 
 

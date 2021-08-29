@@ -63,3 +63,11 @@ api.get_subtitles(video_path="../test_data/YueYu.mp4", lang='ch', manual=True)
 - 结果保存在output目录下
 
 7. 评估视频字幕识别正确率 `python eval.py`
+
+
+### 接口更新
+
+#### 2021-8-29
+
+- api.py文件中新增ocr接口，传入视频文件路径、语言类型、手动截选选项，返回json格式结果。同时提供了demo使用示例`python ocr.py`
+
