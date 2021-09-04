@@ -11,9 +11,9 @@ def ocr(video:str, lang="ch", manual=False):
     v.config_ocr_engine(lang = lang, drop_score=0.85)
     v.run_ocr()
     res = v.get_subtitles(sim_threshold=0.7, srt_format=True)
-    json_res = json.dumps(res, ensure_ascii=False)
-    print(json_res)
-    return json_res
+    # json_res = json.dumps(res, ensure_ascii=False)
+    # print(json_res)
+    return res   #字典列表
 
 
 def get_subtitles(video_path: str, lang="ch", manual=False, srt_format=True, outfile=None) -> str:

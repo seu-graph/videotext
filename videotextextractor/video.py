@@ -40,9 +40,9 @@ class Video:
         det_path = './infer_model/det'
         rec_path = './infer_model/rec'
         cls_path = './infer_model/cls'
-        rec_dic_path = '/opt/videotext/infer_model/ppocr_keys_v1.txt'
-        det_path_big = '/opt/videotext/infer_model/ch_ppocr_server_v2.0_det_infer'
-        rec_path_big = '/opt/videotext/infer_model/ch_ppocr_server_v2.0_rec_infer'
+        rec_dic_path = '/videotext/infer_model/ppocr_keys_v1.txt'
+        det_path_big = '/videotext/infer_model/ch_ppocr_server_v2.0_det_infer'
+        rec_path_big = '/videotext/infer_model/ch_ppocr_server_v2.0_rec_infer'
         self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score, rec_model_dir=rec_path_big, rec_char_dict_path = rec_dic_path,
                                         det_model_dir=det_path_big)
         #self.ocr_engine = PaddleOCR(lang=lang, drop_score=drop_score, rec_model_dir=rec_path, det_model_dir=det_path, cls_model_dir=cls_path, rec_char_dict_path = rec_dic_path)
