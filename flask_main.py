@@ -35,10 +35,6 @@ class VideoText(Resource):
         res = self.main_func(videoPath, args["lang"])
         return jsonify(res)
 
-app = creat_app()
-CORS(app)
-app.config['JSON_AS_ASCII'] = False
-#app.run(host="0.0.0.0", port=5555, debug=True)
 
 if __name__ == "__main__":
     app = creat_app()
